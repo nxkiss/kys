@@ -1,0 +1,1602 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>⛧ VOID ⛧</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        * {
+            cursor: none !important;
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --vantablack: #050505;
+            --void: #0a0a0a;
+            --glass: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.08);
+            --white: #ffffff;
+            --dim: #888888;
+            --accent: #8a0000;
+            --spotify-green: #1DB954;
+        }
+
+        body {
+            background: var(--vantablack);
+            font-family: 'Inter', sans-serif;
+            overflow: hidden;
+            color: var(--white);
+            min-height: 100vh;
+        }
+
+        /* Sharp Cursor */
+        .cursor {
+            position: fixed;
+            pointer-events: none;
+            z-index: 99999;
+            mix-blend-mode: difference;
+            width: 36px;
+            height: 36px;
+            transition: transform 0.14s cubic-bezier(.2,.9,.3,1), opacity 0.12s linear;
+            transform-origin: center center;
+            will-change: transform, left, top;
+            opacity: 1;
+        }
+
+        .cursor-dot {
+            width: 4px;
+            height: 4px;
+            background: white;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            border-radius: 50%;
+            transition: transform 0.08s cubic-bezier(.2,.9,.3,1), background 0.08s;
+            box-shadow: 0 0 8px rgba(255,255,255,0.14), 0 0 18px rgba(138,0,0,0.06);
+        }
+
+        .cursor-cross {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+            width: 100%;
+            height: 100%;
+        }
+
+        .cross-layer {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            will-change: transform, opacity;
+        }
+
+        .cross-layer::before {
+            content: '';
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            width: 1px;
+            height: 28px;
+            border-radius: 1px;
+        }
+
+        .cross-layer::after {
+            content: '';
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            width: 28px;
+            height: 1px;
+            border-radius: 1px;
+        }
+
+        .cross-r::before, .cross-r::after { background: rgba(255,80,80,0.95); mix-blend-mode: screen; }
+        .cross-g::before, .cross-g::after { background: rgba(80,255,120,0.85); mix-blend-mode: screen; }
+        .cross-b::before, .cross-b::after { background: rgba(120,160,255,0.85); mix-blend-mode: screen; }
+
+        .cursor:not(.cursor--glitch) .cross-r { transform: translate(-50%, -50%); opacity: 0.95; }
+        .cursor:not(.cursor--glitch) .cross-g { transform: translate(-50%, -50%); opacity: 0.7; }
+        .cursor:not(.cursor--glitch) .cross-b { transform: translate(-50%, -50%); opacity: 0.6; }
+
+        @keyframes crossJitter {
+            0% { transform: translate(-50%, -50%) translateX(0) translateY(0); }
+            20% { transform: translate(-50%, -50%) translateX(-2px) translateY(1px); }
+            40% { transform: translate(-50%, -50%) translateX(3px) translateY(-1px); }
+            60% { transform: translate(-50%, -50%) translateX(-4px) translateY(2px); }
+            80% { transform: translate(-50%, -50%) translateX(2px) translateY(-2px); }
+            100% { transform: translate(-50%, -50%) translateX(0) translateY(0); }
+        }
+
+        .cursor.cursor--glitch .cross-r { animation: crossJitter 0.28s steps(6, end) both; }
+        .cursor.cursor--glitch .cross-g { animation: crossJitter 0.32s steps(6, end) both reverse; }
+        .cursor.cursor--glitch .cross-b { animation: crossJitter 0.36s steps(6, end) both; }
+
+        .cursor-corners {
+            width: 28px;
+            height: 28px;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            opacity: 0.85;
+        }
+
+        .cursor-corners::before,
+        .cursor-corners::after,
+        .cursor-corner-bl,
+        .cursor-corner-br {
+            position: absolute;
+            width: 6px;
+            height: 6px;
+            border-color: white;
+            border-style: solid;
+            border-width: 0;
+            transition: all 0.10s cubic-bezier(.2,.9,.3,1);
+        }
+
+        .cursor-corners::before { content: ''; top: 0; left: 0; border-top-width: 1px; border-left-width: 1px; }
+        .cursor-corners::after  { content: ''; top: 0; right: 0; border-top-width: 1px; border-right-width: 1px; }
+        .cursor-corner-bl { bottom: 0; left: 0; border-bottom-width: 1px; border-left-width: 1px; }
+        .cursor-corner-br { bottom: 0; right: 0; border-bottom-width: 1px; border-right-width: 1px; }
+
+        .cursor-ring {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 8px;
+            height: 8px;
+            transform: translate(-50%, -50%);
+            border-radius: 50%;
+            pointer-events: none;
+            opacity: 0;
+            border: 1px solid rgba(255,255,255,0.8);
+        }
+
+        @keyframes ringExpandFast {
+            0% { transform: translate(-50%, -50%) scale(0.2); opacity: 0.9; }
+            100% { transform: translate(-50%, -50%) scale(5); opacity: 0; }
+        }
+
+        .cursor--ring-animate { animation: ringExpandFast 0.42s cubic-bezier(.2,.9,.3,1) forwards; }
+
+        .cursor-trails { position: fixed; pointer-events: none; inset: 0; }
+        .cursor-trail { position: fixed; width: 4px; height: 4px; background: rgba(255,255,255,0.12); border-radius: 50%; will-change: transform; }
+
+        .cursor--hover .cursor-dot { transform: translate(-50%, -50%) scale(1.35); background: var(--accent); box-shadow: 0 0 14px rgba(138,0,0,0.25); }
+        .cursor--hover .cross-layer::before { height: 34px; background: var(--accent); }
+        .cursor--hover .cross-layer::after { width: 34px; background: var(--accent); }
+
+        .cursor--down .cursor-dot { transform: translate(-50%, -50%) scale(0.82); }
+        .cursor--hidden { opacity: 0; }
+
+        /* The Gate */
+        #gate {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: var(--vantablack);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+        }
+
+        .gate-text {
+            font-size: 0.9rem;
+            font-weight: 300;
+            color: var(--white);
+            opacity: 0.5;
+            animation: shake 0.1s infinite, flicker 2s infinite;
+            letter-spacing: 0.4em;
+            text-transform: lowercase;
+        }
+
+        .gate-symbol {
+            font-size: 2.5rem;
+            margin-bottom: 1.5rem;
+            animation: pulse 2s infinite, shake 0.15s infinite;
+            color: var(--accent);
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translate(0, 0) rotate(0deg); }
+            25% { transform: translate(-1px, 1px) rotate(-0.5deg); }
+            50% { transform: translate(1px, -1px) rotate(0.5deg); }
+            75% { transform: translate(-1px, -1px) rotate(-0.5deg); }
+        }
+
+        @keyframes flicker {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 0.25; }
+            52% { opacity: 0.7; }
+            54% { opacity: 0.25; }
+        }
+
+        @keyframes pulse {
+            0%, 100% { text-shadow: 0 0 10px rgba(138, 0, 0, 0.5); }
+            50% { text-shadow: 0 0 30px rgba(138, 0, 0, 0.9), 0 0 60px rgba(138, 0, 0, 0.4); }
+        }
+
+        .crt-on {
+            animation: crtOn 0.5s forwards;
+        }
+
+        @keyframes crtOn {
+            0% { transform: scaleY(0.01) scaleX(0); filter: brightness(50); }
+            20% { transform: scaleY(0.01) scaleX(1); filter: brightness(30); }
+            40% { transform: scaleY(1) scaleX(1); filter: brightness(10); }
+            100% { transform: scaleY(1) scaleX(1); filter: brightness(1); opacity: 0; }
+        }
+
+        /* Three.js Canvas - Full screen */
+        #bg-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 0;
+        }
+
+        /* Overlays */
+        .glitch-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            pointer-events: none;
+            z-index: 3;
+            opacity: 0;
+            background: linear-gradient(0deg, transparent 0%, rgba(138, 0, 0, 0.03) 50%, transparent 100%);
+            animation: glitchOverlay 4s infinite;
+        }
+
+        @keyframes glitchOverlay {
+            0%, 100% { opacity: 0; transform: translateY(0); }
+            5% { opacity: 1; transform: translateY(-100%); }
+            10% { opacity: 0; }
+            45% { opacity: 0; }
+            50% { opacity: 0.5; transform: translateX(2px); }
+            51% { opacity: 0; transform: translateX(0); }
+        }
+
+        .noise-overlay {
+            position: fixed;
+            top: -50%;
+            left: -50%;
+            width: 200vw;
+            height: 200vh;
+            pointer-events: none;
+            z-index: 5;
+            opacity: 0.03;
+            mix-blend-mode: overlay;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+            animation: noiseMove 0.15s steps(3) infinite;
+        }
+
+        @keyframes noiseMove {
+            0% { transform: translate(0, 0); }
+            33% { transform: translate(-1%, -1%); }
+            66% { transform: translate(1%, 1%); }
+            100% { transform: translate(0, 0); }
+        }
+
+        .scanlines {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 200vh;
+            pointer-events: none;
+            z-index: 6;
+            background: repeating-linear-gradient(
+                0deg,
+                transparent,
+                transparent 3px,
+                rgba(0, 0, 0, 0.04) 3px,
+                rgba(0, 0, 0, 0.04) 4px
+            );
+            animation: scanMove 10s linear infinite;
+        }
+
+        @keyframes scanMove {
+            0% { transform: translateY(0); }
+            100% { transform: translateY(-50%); }
+        }
+
+        .vignette {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            pointer-events: none;
+            z-index: 7;
+            background: radial-gradient(ellipse at center, transparent 0%, rgba(0,0,0,0.6) 100%);
+        }
+
+        /* Main Content */
+        #main-content {
+            position: relative;
+            z-index: 10;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+            opacity: 0;
+            flex-direction: column;
+            gap: 1.5rem;
+            overflow-y: auto;
+        }
+
+        /* Glass Card */
+        .glass-card {
+            background: var(--glass);
+            backdrop-filter: blur(40px);
+            -webkit-backdrop-filter: blur(40px);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            padding: 3rem 2.5rem;
+            text-align: center;
+            max-width: 340px;
+            width: 100%;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .glass-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+        }
+
+        /* Avatar */
+        .avatar-wrapper {
+            position: relative;
+            width: 100px;
+            height: 100px;
+            margin: 0 auto 1.5rem;
+        }
+
+        .avatar {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            object-fit: cover;
+            filter: grayscale(100%) contrast(1.2);
+            border: 2px solid var(--glass-border);
+        }
+
+        .avatar-glow {
+            position: absolute;
+            inset: -4px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(138, 0, 0, 0.3) 0%, transparent 70%);
+            animation: avatarGlow 3s ease-in-out infinite;
+        }
+
+        @keyframes avatarGlow {
+            0%, 100% { opacity: 0.5; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.1); }
+        }
+
+        .username-container {
+            position: relative;
+            display: inline-block;
+            margin-bottom: 0.5rem;
+        }
+
+        #particle-canvas {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .username {
+            position: relative;
+            z-index: 1;
+            font-size: 1.8rem;
+            font-weight: 600;
+            color: var(--white);
+            letter-spacing: 0.02em;
+        }
+
+        .handle {
+            font-size: 0.8rem;
+            color: var(--dim);
+            font-weight: 400;
+            margin-bottom: 1.5rem;
+        }
+
+        .status {
+            display: inline-flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.35rem;
+            font-size: 0.76rem;
+            color: var(--dim);
+            letter-spacing: 0.06em;
+            text-transform: none;
+            margin-bottom: 2rem;
+            padding: 0.6rem 1.2rem;
+            border-radius: 14px;
+            max-width: 320px;
+            text-align: center;
+            border: 1px solid rgba(255,255,255,0.02);
+            -webkit-backdrop-filter: blur(6px);
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background: var(--accent);
+            border-radius: 50%;
+            animation: statusPulse 2s infinite;
+            box-shadow: 0 0 6px rgba(138,0,0,0.18);
+        }
+
+        .status-text {
+            position: relative;
+            z-index: 1;
+            display: block;
+            white-space: normal;
+            line-height: 1.15;
+            max-width: 280px;
+            word-wrap: break-word;
+            color: var(--dim);
+            text-transform: none;
+            font-weight: 700;
+        }
+
+        /* quick stutter pulses: short visible bursts with small offsets */
+        .status-text::before {
+            transform: translateX(0px) translateY(0px);
+            animation: stutterA 1.6s steps(6, end) infinite;
+            opacity: 0.0;
+        }
+        .status-text::after {
+            transform: translateX(0px) translateY(0px);
+            animation: stutterB 1.6s steps(6, end) infinite;
+            opacity: 0.0;
+            mix-blend-mode: overlay;
+        }
+        @keyframes stutterA {
+            0% { opacity: 0; transform: translateX(0px) translateY(0px); clip-path: inset(0 0 0 0); }
+            6% { opacity: 0.95; transform: translateX(2px) translateY(-1px); clip-path: inset(0% 0% 60% 0%); }
+            10% { opacity: 0; transform: translateX(0px) translateY(0px); }
+            20% { opacity: 0; }
+            26% { opacity: 0.9; transform: translateX(-1px) translateY(1px); clip-path: inset(70% 0% 0% 0%); }
+            30% { opacity: 0; }
+            60% { opacity: 0; }
+            66% { opacity: 0.9; transform: translateX(1px) translateY(-1px); clip-path: inset(20% 0% 60% 0%); }
+            70% { opacity: 0; }
+            100% { opacity: 0; transform: translateX(0px) translateY(0px); clip-path: inset(0 0 0 0); }
+        }
+        @keyframes stutterB {
+            0% { opacity: 0; transform: translateX(0px) translateY(0px); clip-path: inset(0 0 0 0); }
+            8% { opacity: 0.85; transform: translateX(-2px) translateY(1px); clip-path: inset(40% 0% 0% 0%); }
+            12% { opacity: 0; transform: translateX(0px) translateY(0px); }
+            32% { opacity: 0; }
+            38% { opacity: 0.85; transform: translateX(2px) translateY(-2px); clip-path: inset(0% 0% 40% 0%); }
+            42% { opacity: 0; }
+            74% { opacity: 0; }
+            80% { opacity: 0.7; transform: translateX(-1px) translateY(1px); clip-path: inset(60% 0% 10% 0%); }
+            84% { opacity: 0; }
+            100% { opacity: 0; transform: translateX(0px) translateY(0px); }
+        }
+        /* subtle constant flicker to keep it alive but stuttery */
+        @keyframes statusFlicker { 0% { opacity: 1; } 50% { opacity: 0.96; } 100% { opacity: 1; } }
+        .status-text { animation: statusFlicker 4s infinite; }
+
+        @keyframes statusPulse {
+            0%, 100% { opacity: 1; box-shadow: 0 0 8px var(--accent); }
+            50% { opacity: 0.5; box-shadow: none; }
+        }
+
+        .social-links {
+            display: flex;
+            justify-content: center;
+            gap: 0.75rem;
+        }
+
+        .social-link {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--glass-border);
+            color: var(--white);
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+
+        .social-link:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.2);
+            transform: translateY(-2px);
+        }
+
+        .social-link svg {
+            width: 18px;
+            height: 18px;
+            fill: currentColor;
+            opacity: 0.8;
+        }
+
+        .social-link:hover svg {
+            opacity: 1;
+        }
+
+        /* Spotify Player */
+        .spotify-player {
+            background: var(--glass);
+            backdrop-filter: blur(40px);
+            -webkit-backdrop-filter: blur(40px);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 1rem 1.25rem;
+            max-width: 340px;
+            width: 100%;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .spotify-player::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgb(187 83 83 / 30%), transparent);
+        }
+
+        .player-header {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 0.75rem;
+            font-size: 0.65rem;
+            color: var(--spotify-green);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+
+        .player-header svg {
+            width: 14px;
+            height: 14px;
+            fill: var(--spotify-green);
+        }
+
+        .player-content {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .album-art {
+            width: 56px;
+            height: 56px;
+            border-radius: 8px;
+            background: linear-gradient(135deg, #1a1a1a, #0a0a0a);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .album-art-icon {
+            font-size: 1.5rem;
+            color: var(--accent);
+            opacity: 0.8;
+        }
+
+        .album-art-img {
+            width: 100%;
+            height: 100%;
+            display: block;
+            object-fit: cover;
+            border-radius: 8px;
+            filter: grayscale(100%) contrast(1.05);
+            transition: transform 0.25s ease, filter 0.25s ease;
+        }
+        .album-art:hover .album-art-img {
+            transform: scale(1.03);
+            filter: grayscale(0%) contrast(1.05);
+        }
+
+        .album-art.no-album::after {
+            content: '⛧';
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.6rem;
+            color: var(--accent);
+            opacity: 0.92;
+            background: linear-gradient(135deg, rgba(0,0,0,0.12), rgba(255,255,255,0.02));
+        }
+
+        .track-info {
+            flex: 1;
+            min-width: 0;
+            text-align: left;
+        }
+
+        .track-title {
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: var(--white);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            margin-bottom: 0.2rem;
+        }
+
+        .track-artist {
+            font-size: 0.75rem;
+            color: var(--dim);
+        }
+
+        .player-controls {
+            display: none;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .play-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--white);
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+            flex-shrink: 0;
+        }
+
+        .play-btn:hover {
+            transform: scale(1.05);
+            background: #e0e0e0;
+        }
+
+        .play-btn svg {
+            width: 16px;
+            height: 16px;
+            fill: var(--vantablack);
+            margin-left: 2px;
+        }
+
+        .play-btn.playing svg {
+            margin-left: 0;
+        }
+
+        .progress-section {
+            margin-top: 0.75rem;
+        }
+
+        .progress-bar-container {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .progress-time {
+            font-size: 0.65rem;
+            color: var(--dim);
+            min-width: 32px;
+            font-family: 'Inter', sans-serif;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .progress-bar {
+            flex: 1;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 2px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: var(--white);
+            border-radius: 2px;
+            width: 0%;
+            transition: width 0.1s linear;
+        }
+
+        .progress-bar:hover .progress-fill {
+            background: var(--spotify-green);
+        }
+
+        .visualizer-container {
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            gap: 2px;
+            height: 24px;
+            margin-top: 0.75rem;
+        }
+
+        .visualizer-bar {
+            width: 3px;
+            background: linear-gradient(to top, #3f3f3f, rgb(255 255 255 / 30%));
+            border-radius: 1px;
+            transition: height 0.05s ease;
+        }
+
+        .floating-symbol {
+            position: fixed;
+            font-size: 1rem;
+            color: rgba(138, 0, 0, 0.08);
+            pointer-events: none;
+            z-index: 4;
+            animation: float 20s infinite linear;
+        }
+
+        @keyframes float {
+            0% { transform: translateY(100vh) rotate(0deg); opacity: 0; }
+            10% { opacity: 0.1; }
+            90% { opacity: 0.1; }
+            100% { transform: translateY(-100vh) rotate(360deg); opacity: 0; }
+        }
+
+        @media (max-width: 480px) {
+            .glass-card, .spotify-player {
+                padding: 2rem 1.5rem;
+                border-radius: 20px;
+            }
+            .username {
+                font-size: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Custom Cursor -->
+    <div class="cursor" id="cursor">
+        <div class="cursor-dot"></div>
+        <div class="cursor-cross">
+            <span class="cross-layer cross-r"></span>
+            <span class="cross-layer cross-g"></span>
+            <span class="cross-layer cross-b"></span>
+        </div>
+        <div class="cursor-corners">
+            <div class="cursor-corner-bl"></div>
+            <div class="cursor-corner-br"></div>
+        </div>
+        <div class="cursor-ring" id="cursorRing"></div>
+        <div class="cursor-trails" id="cursorTrails"></div>
+    </div>
+
+    <!-- Audio -->
+    <audio id="audio" loop preload="auto" crossorigin="anonymous">
+        <source src="audio.mp3" type="audio/mpeg">
+    </audio>
+
+    <!-- The Gate -->
+    <div id="gate">
+        <div class="gate-symbol">⛧</div>
+        <div class="gate-text">enter the void</div>
+    </div>
+
+    <!-- Three.js Background -->
+    <canvas id="bg-canvas"></canvas>
+
+    <!-- Overlays -->
+    <div class="glitch-overlay"></div>
+    <div class="noise-overlay"></div>
+    <div class="scanlines"></div>
+    <div class="vignette"></div>
+
+    <!-- Floating Symbols -->
+    <div class="floating-symbol" style="left: 10%; animation-delay: 0s;">⛧</div>
+    <div class="floating-symbol" style="left: 30%; animation-delay: 5s;">✦</div>
+    <div class="floating-symbol" style="left: 50%; animation-delay: 2s;">◆</div>
+    <div class="floating-symbol" style="left: 70%; animation-delay: 8s;">⛧</div>
+    <div class="floating-symbol" style="left: 90%; animation-delay: 12s;">✦</div>
+
+    <!-- Main Content -->
+    <div id="main-content">
+        <div class="glass-card">
+            <div class="avatar-wrapper">
+                <div class="avatar-glow"></div>
+                <img src="./d812dd1e71f3a2ce41693609823c0c0e.webp" alt="Avatar" class="avatar">
+            </div>
+
+            <div class="username-container">
+                <canvas id="particle-canvas"></canvas>
+                <h1 class="username">Rowan</h1>
+            </div>
+            
+            <p class="handle">@nxkiss</p>
+
+            <div class="status">
+                <div class="status-text" data-text="lurking in the void">lurking in the void</div>
+            </div>
+
+            <div class="social-links">
+                <a href="#" class="social-link">
+                    <svg viewBox="0 0 24 24"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/></svg>
+                </a>
+                <a href="#" class="social-link">
+                    <svg viewBox="0 0 24 24"><path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/></svg>
+                </a>
+                <a href="#" class="social-link">
+                    <svg viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+                </a>
+                <a href="#" class="social-link">
+                    <svg viewBox="0 0 24 24"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+                </a>
+                <a href="#" class="social-link">
+                    <svg viewBox="0 0 24 24"><path d="M11.979 0C5.678 0 .511 4.86.022 11.037l6.432 2.658c.545-.371 1.203-.59 1.912-.59.063 0 .125.004.188.006l2.861-4.142V8.91c0-2.495 2.028-4.524 4.524-4.524 2.494 0 4.524 2.031 4.524 4.527s-2.03 4.525-4.524 4.525h-.105l-4.076 2.911c0 .052.004.105.004.159 0 1.875-1.515 3.396-3.39 3.396-1.635 0-3.016-1.173-3.331-2.727L.436 15.27C1.862 20.307 6.486 24 11.979 24c6.627 0 11.999-5.373 11.999-12S18.605 0 11.979 0z"/></svg>
+                </a>
+            </div>
+        </div>
+
+        <div class="spotify-player">
+            <div class="player-content">
+                <div class="album-art">
+                    <img src="album.jpg" alt="Album cover" class="album-art-img" loading="lazy" onerror="this.style.display='none'; this.parentElement.classList.add('no-album');" />
+                </div>
+                <div class="track-info">
+                    <div class="track-title">покончил я тебя не люблю я давно покончил с жизнью</div>
+                    <div class="track-artist">emoslut666</div>
+                </div>
+                <div class="player-controls">
+                    <button class="play-btn" id="playBtn">
+                        <svg id="playIcon" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                        <svg id="pauseIcon" style="display: none;" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+                    </button>
+                </div>
+            </div>
+            <div class="progress-section">
+                <div class="progress-bar-container">
+                    <span class="progress-time" id="currentTime">0:00</span>
+                    <div class="progress-bar" id="progressBar">
+                        <div class="progress-fill" id="progressFill"></div>
+                    </div>
+                    <span class="progress-time" id="totalTime">0:00</span>
+                </div>
+            </div>
+            <div class="visualizer-container" id="visualizer"></div>
+        </div>
+    </div>
+
+    <script>
+        // ============ CURSOR ============
+        const cursor = document.getElementById('cursor');
+        const cursorRing = document.getElementById('cursorRing');
+        const trailsContainer = document.getElementById('cursorTrails');
+        const cursorDot = cursor.querySelector('.cursor-dot');
+
+        let dotX = window.innerWidth / 2, dotY = window.innerHeight / 2;
+        let crossX = dotX, crossY = dotY;
+        let targetX = dotX, targetY = dotY;
+
+        const trailCount = 4;
+        const trails = [];
+        for (let i = 0; i < trailCount; i++) {
+            const t = document.createElement('div');
+            t.className = 'cursor-trail';
+            t.style.opacity = `${0.12 - i * 0.02}`;
+            trailsContainer.appendChild(t);
+            trails.push({ el: t, x: dotX, y: dotY });
+        }
+
+        function onMove(e) {
+            targetX = e.clientX;
+            targetY = e.clientY;
+            cursor.classList.remove('cursor--hidden');
+        }
+
+        document.addEventListener('mousemove', onMove);
+        document.addEventListener('mouseenter', () => cursor.classList.remove('cursor--hidden'));
+        document.addEventListener('mouseleave', () => cursor.classList.add('cursor--hidden'));
+
+        const interactiveEls = document.querySelectorAll('a, button, .social-link, .play-btn');
+        interactiveEls.forEach(el => {
+            el.addEventListener('mouseenter', () => cursor.classList.add('cursor--hover'));
+            el.addEventListener('mouseleave', () => cursor.classList.remove('cursor--hover'));
+        });
+
+        document.addEventListener('mousedown', () => {
+            cursor.classList.add('cursor--down');
+            if (cursorRing) {
+                cursorRing.classList.remove('cursor--ring-animate');
+                void cursorRing.offsetWidth;
+                cursorRing.classList.add('cursor--ring-animate');
+            }
+        });
+        document.addEventListener('mouseup', () => cursor.classList.remove('cursor--down'));
+        document.addEventListener('touchstart', () => cursor.classList.add('cursor--hidden'));
+
+        function updateCursor() {
+            dotX += (targetX - dotX) * 0.45;
+            dotY += (targetY - dotY) * 0.45;
+            crossX += (targetX - crossX) * 0.12;
+            crossY += (targetY - crossY) * 0.12;
+
+            const dx = crossX - (cursor._prevCrossX || crossX);
+            const dy = crossY - (cursor._prevCrossY || crossY);
+            const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+            const speed = Math.min(1.6, Math.hypot(dx, dy) * 0.6);
+            const crossScale = 1 + Math.min(0.12, speed * 0.12);
+
+            cursor.style.left = crossX + 'px';
+            cursor.style.top = crossY + 'px';
+            cursor.style.transform = `translate(-50%, -50%) rotate(${angle || 0}deg) scale(${crossScale})`;
+
+            const offsetX = dotX - crossX;
+            const offsetY = dotY - crossY;
+            cursorDot.style.transform = `translate(calc(-50% + ${offsetX}px), calc(-50% + ${offsetY}px))`;
+
+            for (let i = 0; i < trails.length; i++) {
+                const tgt = i === 0 ? { x: dotX, y: dotY } : trails[i - 1];
+                trails[i].x += (tgt.x - trails[i].x) * (0.12 + i * 0.05);
+                trails[i].y += (tgt.y - trails[i].y) * (0.12 + i * 0.05);
+                trails[i].el.style.left = trails[i].x + 'px';
+                trails[i].el.style.top = trails[i].y + 'px';
+                trails[i].el.style.transform = 'translate(-50%, -50%)';
+            }
+
+            cursor._prevCrossX = crossX;
+            cursor._prevCrossY = crossY;
+            requestAnimationFrame(updateCursor);
+        }
+        updateCursor();
+
+        // ============ GATE ENTRY ============
+        const gate = document.getElementById('gate');
+        const mainContent = document.getElementById('main-content');
+        const audio = document.getElementById('audio');
+        let audioContext, analyser, dataArray;
+
+        gate.addEventListener('click', () => {
+            gate.classList.add('crt-on');
+            
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            analyser = audioContext.createAnalyser();
+            analyser.fftSize = 128;
+            analyser.smoothingTimeConstant = 0.3;
+            const source = audioContext.createMediaElementSource(audio);
+            source.connect(analyser);
+            analyser.connect(audioContext.destination);
+            dataArray = new Uint8Array(analyser.frequencyBinCount);
+            
+            audio.volume = 0.5;
+            audio.play().catch(e => console.log('Audio blocked:', e));
+            
+            setTimeout(() => {
+                gate.style.display = 'none';
+                gsap.to(mainContent, { opacity: 1, duration: 1.5, ease: 'power2.inOut' });
+                playEntranceAnimations();
+                initParticles();
+                initVisualizer();
+            }, 500);
+        });
+
+        // ============ AUDIO VISUALIZER ============
+        function initVisualizer() {
+            const container = document.getElementById('visualizer');
+            const barCount = 24;
+            
+            for (let i = 0; i < barCount; i++) {
+                const bar = document.createElement('div');
+                bar.className = 'visualizer-bar';
+                bar.style.height = '2px';
+                container.appendChild(bar);
+            }
+            
+            const bars = container.querySelectorAll('.visualizer-bar');
+            
+            function updateVisualizer() {
+                if (analyser && dataArray) {
+                    analyser.getByteFrequencyData(dataArray);
+                    bars.forEach((bar, i) => {
+                        const value = dataArray[i] || 0;
+                        const height = Math.max(2, (value / 255) * 24);
+                        bar.style.height = height + 'px';
+                    });
+                }
+                requestAnimationFrame(updateVisualizer);
+            }
+            updateVisualizer();
+        }
+
+        // ============ AUDIO PLAYER ============
+        const playBtn = document.getElementById('playBtn');
+        const playIcon = document.getElementById('playIcon');
+        const pauseIcon = document.getElementById('pauseIcon');
+        const progressBar = document.getElementById('progressBar');
+        const progressFill = document.getElementById('progressFill');
+        const currentTimeEl = document.getElementById('currentTime');
+        const totalTimeEl = document.getElementById('totalTime');
+
+        function formatTime(seconds) {
+            if (isNaN(seconds)) return '0:00';
+            const mins = Math.floor(seconds / 60);
+            const secs = Math.floor(seconds % 60);
+            return `${mins}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        audio.addEventListener('loadedmetadata', () => totalTimeEl.textContent = formatTime(audio.duration));
+        audio.addEventListener('timeupdate', () => {
+            progressFill.style.width = `${(audio.currentTime / audio.duration) * 100}%`;
+            currentTimeEl.textContent = formatTime(audio.currentTime);
+        });
+
+        playBtn.addEventListener('click', () => {
+            if (audio.paused) {
+                if (audioContext?.state === 'suspended') audioContext.resume();
+                audio.play();
+            } else {
+                audio.pause();
+            }
+        });
+
+        audio.addEventListener('play', () => {
+            playIcon.style.display = 'none';
+            pauseIcon.style.display = 'block';
+        });
+
+        audio.addEventListener('pause', () => {
+            playIcon.style.display = 'block';
+            pauseIcon.style.display = 'none';
+        });
+
+        progressBar.addEventListener('click', (e) => {
+            const rect = progressBar.getBoundingClientRect();
+            const percent = (e.clientX - rect.left) / rect.width;
+            if (audio.duration) audio.currentTime = percent * audio.duration;
+        });
+
+        // ============ PARTICLES ============
+        function initParticles() {
+            const canvas = document.getElementById('particle-canvas');
+            const ctx = canvas.getContext('2d');
+            const username = document.querySelector('.username');
+            const rect = username.getBoundingClientRect();
+            
+            const padding = 40;
+            canvas.width = rect.width + padding * 2;
+            canvas.height = rect.height + padding * 2;
+            
+            const particles = [];
+            
+            class Particle {
+                constructor() {
+                    this.reset();
+                }
+                reset() {
+                    this.x = padding + Math.random() * rect.width;
+                    this.y = padding + Math.random() * rect.height;
+                    this.size = Math.random() * 3 + 1;
+                    this.baseX = this.x;
+                    this.baseY = this.y;
+                    this.opacity = Math.random() * 0.4 + 0.1;
+                    this.glitchTimer = Math.random() * 100;
+                    this.isGlitching = false;
+                }
+                update() {
+                    this.glitchTimer--;
+                    if (this.glitchTimer <= 0) {
+                        this.isGlitching = true;
+                        this.glitchTimer = Math.random() * 60 + 20;
+                    }
+                    if (this.isGlitching) {
+                        this.x = this.baseX + (Math.random() - 0.5) * 15;
+                        this.y = this.baseY + (Math.random() - 0.5) * 2;
+                        if (Math.random() > 0.7) this.isGlitching = false;
+                    } else {
+                        this.x = this.baseX + Math.sin(Date.now() * 0.001 + this.baseX) * 2;
+                        this.y = this.baseY + Math.cos(Date.now() * 0.001 + this.baseY) * 1;
+                    }
+                }
+                draw() {
+                    ctx.fillStyle = `rgba(255, 255, 255, ${this.opacity * 0.8})`;
+                    ctx.fillRect(this.x - this.size/2, this.y - this.size/2, this.size, this.size);
+                }
+            }
+            
+            for (let i = 0; i < 80; i++) particles.push(new Particle());
+            
+            function animate() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                particles.forEach(p => { p.update(); p.draw(); });
+                requestAnimationFrame(animate);
+            }
+            animate();
+        }
+
+        // ============ THREE.JS VOID BACKGROUND ============
+        const bgCanvas = document.getElementById('bg-canvas');
+        const renderer = new THREE.WebGLRenderer({ canvas: bgCanvas, antialias: false });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x030303);
+
+        // Use OrthographicCamera for full-screen coverage
+        const frustumSize = 2;
+        const aspect = window.innerWidth / window.innerHeight;
+        const camera = new THREE.OrthographicCamera(
+            -frustumSize * aspect / 2, frustumSize * aspect / 2,
+            frustumSize / 2, -frustumSize / 2,
+            0.1, 100
+        );
+        camera.position.z = 1;
+
+        // Full-screen Void Shader
+        const voidShader = {
+            uniforms: {
+                uTime: { value: 0 },
+                uMouse: { value: new THREE.Vector2(0.5, 0.5) },
+                uMouseVel: { value: new THREE.Vector2(0, 0) },
+                uResolution: { value: new THREE.Vector2(window.innerWidth, window.innerHeight) },
+                uAudio: { value: 0 },
+                uBass: { value: 0 },
+                uMid: { value: 0 },
+                uHigh: { value: 0 },
+                uGlitch: { value: 0 },
+                uJitter: { value: 0 }
+            },
+            vertexShader: `
+                varying vec2 vUv;
+                void main() {
+                    vUv = uv;
+                    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+                }
+            `,
+            fragmentShader: `
+                precision highp float;
+                
+                varying vec2 vUv;
+                uniform float uTime;
+                uniform vec2 uMouse;
+                uniform vec2 uMouseVel;
+                uniform vec2 uResolution;
+                uniform float uAudio;
+                uniform float uBass;
+                uniform float uMid;
+                uniform float uHigh;
+                uniform float uGlitch;
+                uniform float uJitter;
+
+                // Noise functions
+                float hash(vec2 p) {
+                    return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123);
+                }
+                
+                float hash21(vec2 p) {
+                    return fract(sin(dot(p, vec2(41.1, 289.7))) * 45758.5453);
+                }
+
+                float noise(vec2 p) {
+                    vec2 i = floor(p);
+                    vec2 f = fract(p);
+                    f = f * f * (3.0 - 2.0 * f);
+                    float a = hash(i);
+                    float b = hash(i + vec2(1.0, 0.0));
+                    float c = hash(i + vec2(0.0, 1.0));
+                    float d = hash(i + vec2(1.0, 1.0));
+                    return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
+                }
+
+                float fbm(vec2 p, int octaves) {
+                    float value = 0.0;
+                    float amplitude = 0.5;
+                    float frequency = 1.0;
+                    for (int i = 0; i < 8; i++) {
+                        if (i >= octaves) break;
+                        value += amplitude * noise(p * frequency);
+                        amplitude *= 0.5;
+                        frequency *= 2.0;
+                    }
+                    return value;
+                }
+
+                // Voronoi
+                vec2 voronoi(vec2 p) {
+                    vec2 n = floor(p);
+                    vec2 f = fract(p);
+                    float md = 8.0;
+                    vec2 mr;
+                    for (int j = -1; j <= 1; j++) {
+                        for (int i = -1; i <= 1; i++) {
+                            vec2 g = vec2(float(i), float(j));
+                            vec2 o = vec2(hash(n + g), hash(n + g + vec2(17.0, 31.0)));
+                            o = 0.5 + 0.5 * sin(uTime * 0.5 + 6.2831 * o);
+                            vec2 r = g + o - f;
+                            float d = dot(r, r);
+                            if (d < md) { md = d; mr = r; }
+                        }
+                    }
+                    return vec2(sqrt(md), dot(mr, mr));
+                }
+
+                void main() {
+                    vec2 uv = vUv;
+                    vec2 aspect = vec2(uResolution.x / uResolution.y, 1.0);
+                    vec2 centeredUv = (uv - 0.5) * aspect;
+                    
+                    float t = uTime;
+                    float dist = length(centeredUv);
+                    
+                    // Audio-reactive jitter offset
+                    float jitterAmount = uJitter + uBass * 0.02 + uAudio * 0.01;
+                    vec2 jitterOffset = vec2(
+                        (hash(vec2(floor(uv.y * 200.0), t * 60.0)) - 0.5) * jitterAmount,
+                        (hash(vec2(floor(uv.x * 200.0), t * 50.0)) - 0.5) * jitterAmount * 0.3
+                    );
+                    
+                    // Apply jitter to UV
+                    vec2 jitteredUv = uv + jitterOffset;
+                    
+                    // === LAYER 1: Deep flowing void ===
+                    float flowSpeed = 0.08 + uAudio * 0.15;
+                    vec2 flowUv = jitteredUv + vec2(t * flowSpeed, t * flowSpeed * 0.7);
+                    float voidFlow = fbm(flowUv * (2.0 + uBass * 2.0), 6);
+                    voidFlow = smoothstep(0.35, 0.65, voidFlow);
+                    
+                    // === LAYER 2: Cellular structures ===
+                    vec2 cellUv = jitteredUv * (4.0 + uMid * 4.0) + t * 0.1;
+                    vec2 vor = voronoi(cellUv);
+                    float cellEdges = smoothstep(0.02, 0.04, vor.x) - smoothstep(0.04, 0.08, vor.x);
+                    cellEdges *= 0.6 + uHigh * 0.8;
+                    
+                    // === LAYER 3: Thin grid lines ===
+                    float gridScale = 30.0 + uBass * 20.0;
+                    vec2 gridUv = fract(jitteredUv * gridScale);
+                    float gridThickness = 0.01 + uAudio * 0.01;
+                    float gridH = step(1.0 - gridThickness, gridUv.x);
+                    float gridV = step(1.0 - gridThickness, gridUv.y);
+                    float grid = max(gridH, gridV);
+                    
+                    // Grid fades toward edges and pulses with audio
+                    float gridFade = smoothstep(0.7, 0.3, dist);
+                    gridFade *= 0.15 + uMid * 0.3;
+                    grid *= gridFade;
+                    
+                    // Jitter the grid on beat
+                    if (uBass > 0.5) {
+                        float glitchLine = step(0.98, hash(vec2(floor(uv.y * 100.0), t * 30.0)));
+                        grid += glitchLine * 0.3;
+                    }
+                    
+                    // === LAYER 4: Floating particles ===
+                    float particles = 0.0;
+                    for (float i = 0.0; i < 4.0; i++) {
+                        float speed = 0.05 + i * 0.03 + uAudio * 0.1;
+                        vec2 particleUv = jitteredUv * (8.0 + i * 6.0) + vec2(t * speed, t * speed * 0.6);
+                        particleUv += uBass * 0.1 * vec2(sin(t * 10.0 + i), cos(t * 8.0 + i));
+                        float p = noise(particleUv);
+                        p = smoothstep(0.72 - uHigh * 0.1, 0.78, p);
+                        particles += p * (0.2 - i * 0.04);
+                    }
+                    
+                    // === LAYER 5: Flowing streams ===
+                    float streamSpeed = 0.2 + uMid * 0.5;
+                    vec2 streamUv1 = vec2(jitteredUv.x * 6.0 + t * streamSpeed, jitteredUv.y * 1.5);
+                    vec2 streamUv2 = vec2(jitteredUv.x * 1.5, jitteredUv.y * 6.0 - t * streamSpeed * 0.8);
+                    float streams = fbm(streamUv1, 4) * 0.5 + fbm(streamUv2, 4) * 0.5;
+                    streams = smoothstep(0.4, 0.6, streams) * 0.08;
+                    streams *= 1.0 + uBass * 0.5;
+                    
+                    // === LAYER 6: Mouse interaction ===
+                    vec2 mouseUv = uMouse;
+                    float mouseDist = distance(uv, mouseUv);
+                    
+                    // Ripple effect
+                    float ripple = sin(mouseDist * 40.0 - t * 4.0) * 0.5 + 0.5;
+                    ripple *= smoothstep(0.25, 0.0, mouseDist);
+                    ripple *= 0.15 + uAudio * 0.2;
+                    
+                    // Mouse velocity distortion
+                    float velMag = length(uMouseVel);
+                    float mouseDistort = smoothstep(0.3, 0.0, mouseDist) * velMag * 0.3;
+                    
+                    // === LAYER 7: Glitch effects ===
+                    float glitchIntensity = uGlitch + uBass * 0.3;
+                    
+                    // Horizontal tears
+                    float tear = 0.0;
+                    if (glitchIntensity > 0.2) {
+                        float tearLine = step(0.97, sin(uv.y * 150.0 + t * 80.0));
+                        tear = tearLine * glitchIntensity * 0.5;
+                    }
+                    
+                    // Block displacement
+                    float blockGlitch = 0.0;
+                    if (glitchIntensity > 0.4) {
+                        vec2 blockUv = floor(uv * 20.0) / 20.0;
+                        float blockNoise = hash(blockUv + floor(t * 15.0));
+                        blockGlitch = step(0.92, blockNoise) * glitchIntensity * 0.3;
+                    }
+                    
+                    // === COMBINE ALL LAYERS ===
+                    float base = 0.015;
+                    float combined = base;
+                    
+                    combined += voidFlow * 0.03 * (1.0 + uAudio * 0.5);
+                    combined += cellEdges * 0.06;
+                    combined += grid;
+                    combined += particles * (0.15 + uHigh * 0.2);
+                    combined += streams;
+                    combined += ripple;
+                    combined += mouseDistort;
+                    combined += tear;
+                    combined += blockGlitch;
+                    
+                    // Random pixel jitter on high audio
+                    if (uAudio > 0.5) {
+                        float pixelJitter = (hash(uv * 1000.0 + t * 100.0) - 0.5) * uAudio * 0.05;
+                        combined += pixelJitter;
+                    }
+                    
+                    // Audio-reactive brightness pulse
+                    combined *= 1.0 + uBass * 0.3;
+                    
+                    // === VIGNETTE ===
+                    float vignette = smoothstep(1.0, 0.3, dist);
+                    combined *= mix(0.4, 1.0, vignette);
+                    
+                    // === COLOR OUTPUT ===
+                    vec3 color = vec3(combined);
+                    
+                    // Subtle red tint on highlights
+                    float highlight = smoothstep(0.12, 0.2, combined);
+                    color.r += highlight * 0.015 * (1.0 + uBass);
+                    
+                    // Chromatic aberration on glitch
+                    if (glitchIntensity > 0.3) {
+                        float caOffset = glitchIntensity * 0.003;
+                        float r = combined;
+                        float g = combined;
+                        float b = combined;
+                        color = vec3(r + caOffset, g, b - caOffset);
+                    }
+                    
+                    // Clamp for dark aesthetic
+                    color = clamp(color, 0.0, 0.22);
+                    
+                    gl_FragColor = vec4(color, 1.0);
+                }
+            `
+        };
+
+        // Full-screen quad geometry
+        const geometry = new THREE.PlaneGeometry(2 * aspect, 2);
+        const material = new THREE.ShaderMaterial({
+            uniforms: voidShader.uniforms,
+            vertexShader: voidShader.vertexShader,
+            fragmentShader: voidShader.fragmentShader
+        });
+
+        const mesh = new THREE.Mesh(geometry, material);
+        scene.add(mesh);
+
+        // Mouse tracking with velocity
+        let mouseX = 0.5, mouseY = 0.5;
+        let prevMouseX = 0.5, prevMouseY = 0.5;
+        let mouseVelX = 0, mouseVelY = 0;
+        
+        document.addEventListener('mousemove', (e) => {
+            mouseX = e.clientX / window.innerWidth;
+            mouseY = 1.0 - e.clientY / window.innerHeight;
+        });
+
+        let glitchBoost = 0;
+        let jitterBoost = 0;
+
+        document.addEventListener('mousedown', () => { 
+            glitchBoost = 0.8;
+            jitterBoost = 0.05;
+        });
+
+        // Cursor glitch sync
+        function maybePulseCursorGlitch() {
+            if (Math.random() > 0.985) {
+                cursor.classList.add('cursor--glitch');
+                glitchBoost = Math.max(glitchBoost, 0.5);
+                jitterBoost = Math.max(jitterBoost, 0.03);
+                setTimeout(() => cursor.classList.remove('cursor--glitch'), 200);
+            }
+            requestAnimationFrame(maybePulseCursorGlitch);
+        }
+        maybePulseCursorGlitch();
+
+        // Audio data storage
+        let audioData = { bass: 0, mid: 0, high: 0, overall: 0 };
+
+        function getAudioData() {
+            if (!analyser || !dataArray) return;
+            
+            analyser.getByteFrequencyData(dataArray);
+            const bins = dataArray.length;
+            
+            // Split into frequency bands
+            let bassSum = 0, midSum = 0, highSum = 0;
+            const bassEnd = Math.floor(bins * 0.15);
+            const midEnd = Math.floor(bins * 0.5);
+            
+            for (let i = 0; i < bins; i++) {
+                if (i < bassEnd) bassSum += dataArray[i];
+                else if (i < midEnd) midSum += dataArray[i];
+                else highSum += dataArray[i];
+            }
+            
+            audioData.bass = bassSum / (bassEnd * 255);
+            audioData.mid = midSum / ((midEnd - bassEnd) * 255);
+            audioData.high = highSum / ((bins - midEnd) * 255);
+            audioData.overall = (audioData.bass + audioData.mid + audioData.high) / 3;
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            const uniforms = voidShader.uniforms;
+            uniforms.uTime.value += 0.016;
+            
+            // Smooth mouse with velocity
+            const targetMouseX = mouseX;
+            const targetMouseY = mouseY;
+            const currentMouseX = uniforms.uMouse.value.x;
+            const currentMouseY = uniforms.uMouse.value.y;
+            
+            uniforms.uMouse.value.x += (targetMouseX - currentMouseX) * 0.08;
+            uniforms.uMouse.value.y += (targetMouseY - currentMouseY) * 0.08;
+            
+            // Calculate mouse velocity
+            mouseVelX = uniforms.uMouse.value.x - prevMouseX;
+            mouseVelY = uniforms.uMouse.value.y - prevMouseY;
+            uniforms.uMouseVel.value.x += (mouseVelX * 10 - uniforms.uMouseVel.value.x) * 0.1;
+            uniforms.uMouseVel.value.y += (mouseVelY * 10 - uniforms.uMouseVel.value.y) * 0.1;
+            prevMouseX = uniforms.uMouse.value.x;
+            prevMouseY = uniforms.uMouse.value.y;
+
+            // Get audio data
+            getAudioData();
+            
+            // Smooth audio uniforms
+            uniforms.uAudio.value += (audioData.overall - uniforms.uAudio.value) * 0.2;
+            uniforms.uBass.value += (audioData.bass - uniforms.uBass.value) * 0.25;
+            uniforms.uMid.value += (audioData.mid - uniforms.uMid.value) * 0.2;
+            uniforms.uHigh.value += (audioData.high - uniforms.uHigh.value) * 0.15;
+            
+            // Audio triggers jitter and glitch
+            if (audioData.bass > 0.6) {
+                jitterBoost = Math.max(jitterBoost, audioData.bass * 0.04);
+                if (Math.random() > 0.7) {
+                    glitchBoost = Math.max(glitchBoost, audioData.bass * 0.6);
+                }
+            }
+            
+            // Random glitch spikes
+            if (Math.random() > 0.995) {
+                glitchBoost = 0.4 + Math.random() * 0.4;
+                jitterBoost = 0.02 + Math.random() * 0.02;
+            }
+            
+            // Apply and decay
+            uniforms.uGlitch.value = glitchBoost;
+            uniforms.uJitter.value = jitterBoost + audioData.bass * 0.01;
+            
+            glitchBoost *= 0.92;
+            jitterBoost *= 0.95;
+            if (glitchBoost < 0.02) glitchBoost = 0;
+            if (jitterBoost < 0.002) jitterBoost = 0;
+
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        // Handle resize
+        window.addEventListener('resize', () => {
+            const width = window.innerWidth;
+            const height = window.innerHeight;
+            const newAspect = width / height;
+            
+            camera.left = -frustumSize * newAspect / 2;
+            camera.right = frustumSize * newAspect / 2;
+            camera.top = frustumSize / 2;
+            camera.bottom = -frustumSize / 2;
+            camera.updateProjectionMatrix();
+            
+            // Update mesh to cover screen
+            mesh.geometry.dispose();
+            mesh.geometry = new THREE.PlaneGeometry(2 * newAspect, 2);
+            
+            voidShader.uniforms.uResolution.value.set(width, height);
+            renderer.setSize(width, height);
+        });
+
+        // ============ GSAP ANIMATIONS ============
+        gsap.set('.glass-card', { y: 30, opacity: 0, scale: 0.95 });
+        gsap.set('.spotify-player', { y: 20, opacity: 0 });
+        gsap.set('.avatar-wrapper', { scale: 0.8, opacity: 0 });
+        gsap.set('.username', { y: 15, opacity: 0 });
+        gsap.set('.handle', { y: 10, opacity: 0 });
+        gsap.set('.status', { scale: 0.9, opacity: 0 });
+        gsap.set('.social-link', { y: 15, opacity: 0 });
+
+        function playEntranceAnimations() {
+            const tl = gsap.timeline({ delay: 0.2 });
+            
+            tl.to('.glass-card', { y: 0, opacity: 1, scale: 1, duration: 0.8, ease: 'power3.out' })
+              .to('.avatar-wrapper', { scale: 1, opacity: 1, duration: 0.6, ease: 'back.out(1.5)' }, '-=0.4')
+              .to('.username', { y: 0, opacity: 1, duration: 0.5, ease: 'power2.out' }, '-=0.3')
+              .to('.handle', { y: 0, opacity: 1, duration: 0.4, ease: 'power2.out' }, '-=0.2')
+              .to('.status', { scale: 1, opacity: 1, duration: 0.4, ease: 'back.out(1.2)' }, '-=0.2')
+              .to('.social-link', { y: 0, opacity: 1, duration: 0.3, stagger: 0.06, ease: 'power2.out' }, '-=0.1')
+              .to('.spotify-player', { y: 0, opacity: 1, duration: 0.6, ease: 'power3.out' }, '-=0.2');
+        }
+    </script>
+
+    <script>
+        const statuses = [
+    "your existence is irrelevant",
+    "consuming your sanity",
+    "your opinion means very little to me",
+    "watching you sleep",
+    "off my meds",
+    "im inside your walls",
+    "behind you?",
+    "i know what you did",
+    "they are coming for you",
+];
+
+function rotateStatus() {
+    const statusEl = document.querySelector('.status-text');
+    const randomStatus = statuses[Math.floor(Math.random() * statuses.length)];
+    
+    // Glitch effect on change
+    statusEl.style.opacity = '0';
+    setTimeout(() => {
+        statusEl.textContent = randomStatus;
+        statusEl.style.opacity = '1';
+    }, 200);
+}
+
+// Change every 10 seconds
+setInterval(rotateStatus, 3000);
+
+// Also change on click
+document.querySelector('.status').addEventListener('click', rotateStatus);
+    </script>
+</body>
+</html>
